@@ -11,10 +11,7 @@ function is_admin_logged_in(): bool {
 function require_admin(): void {
     session_start();
     if (!is_admin_logged_in()) {
-        $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
-        $basePath = basename($scriptDir) === 'admin' ? dirname($scriptDir) : $scriptDir;
-        $basePath = $basePath === '/' ? '' : rtrim($basePath, '/');
-        header('Location: ' . $basePath . '/admin/login.php');
+        header('Location: ' . site_url('admin/login.php'));
         exit;
     }
 }
@@ -23,6 +20,7 @@ function admin_login(string $username, string $password): bool {
     $user = db_get('users', 'username = ?', [$username]);
     if ($user && password_verify($password, $user['password'])) {
         session_start();
+        session_regenerate_id(true);
         $_SESSION['admin_id'] = (int)$user['id'];
         $_SESSION['admin_name'] = $user['username'];
         return true;

@@ -15,14 +15,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'site_settings') {
-        set_setting('site_name', trim($_POST['site_name'] ?? 'AI 监控面板'));
-        set_setting('site_icon', trim($_POST['site_icon'] ?? ''));
-        set_setting('check_interval', (string)(int)($_POST['check_interval'] ?? 60));
-        set_setting('hero_kicker', trim($_POST['hero_kicker'] ?? 'Live Model Status'));
-        set_setting('hero_title', trim($_POST['hero_title'] ?? 'Service Monitor'));
-        set_setting('hero_description', trim($_POST['hero_description'] ?? '黑白极简状态面板，实时读取模型接口可用性、对话延迟、端点 PING 与最近检测轨迹。'));
-        set_setting('hero_tags', trim($_POST['hero_tags'] ?? 'Liquid Glass UI,Realtime Insight,Black / White'));
-        $message = '设置已保存';
+        $baseUrl = normalize_site_base_url((string)($_POST['site_base_url'] ?? ''));
+        if ($baseUrl !== '' && !preg_match('#^https?://#i', $baseUrl)) {
+            $error = '基础 URL 必须以 http:// 或 https:// 开头';
+        } else {
+            $newConfig = load_config();
+            $newConfig['site_base_url'] = $baseUrl;
+
+            if (!save_config($newConfig)) {
+                $error = '基础 URL 保存失败，请确认 data/config.php 或 data 目录可写';
+            } else {
+                $GLOBALS['config'] = $newConfig;
+                apply_site_base_url_override($newConfig);
+                set_setting('site_name', trim($_POST['site_name'] ?? 'AI 监控面板'));
+                set_setting('site_icon', trim($_POST['site_icon'] ?? ''));
+                set_setting('check_interval', (string)(int)($_POST['check_interval'] ?? 60));
+                set_setting('hero_kicker', trim($_POST['hero_kicker'] ?? 'Live Model Status'));
+                set_setting('hero_title', trim($_POST['hero_title'] ?? 'Service Monitor'));
+                set_setting('hero_description', trim($_POST['hero_description'] ?? '黑白极简状态面板，实时读取模型接口可用性、对话延迟、端点 PING 与最近检测轨迹。'));
+                set_setting('hero_tags', trim($_POST['hero_tags'] ?? 'Liquid Glass UI,Realtime Insight,Black / White'));
+                $message = '设置已保存';
+            }
+        }
     }
 
     if ($action === 'change_password') {
@@ -54,46 +68,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50">
-    <div class="flex min-h-screen">
+    <div class="flex flex-col md:flex-row min-h-screen">
         <!-- 侧边栏 -->
-        <aside class="w-64 bg-gray-900 text-white">
-            <div class="p-5 border-b border-gray-800">
+        <aside class="w-full md:w-64 bg-gray-900 text-white shrink-0">
+            <div class="p-5 border-b border-gray-800 flex items-center justify-between">
                 <h1 class="text-lg font-bold">🤖 管理后台</h1>
+                <button type="button" onclick="document.getElementById('adminNav').classList.toggle('hidden')" class="md:hidden p-2 -mr-2 text-gray-300 hover:text-white" aria-label="切换菜单">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
             </div>
-            <nav class="p-4 space-y-1">
-                <a href="index.php" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
+            <nav id="adminNav" class="hidden md:block p-3 md:p-4 space-y-1">
+                <a href="<?= h(site_url('admin/index.php')) ?>" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                     <span>仪表盘</span>
                 </a>
-                <a href="groups.php" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
+                <a href="<?= h(site_url('admin/groups.php')) ?>" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                     <span>分组管理</span>
                 </a>
-                <a href="channels.php" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
+                <a href="<?= h(site_url('admin/channels.php')) ?>" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     <span>渠道管理</span>
                 </a>
-                <a href="settings.php" class="flex items-center space-x-3 px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-medium">
+                <a href="<?= h(site_url('admin/settings.php')) ?>" class="flex items-center space-x-3 px-4 py-2.5 bg-blue-600 rounded-lg text-sm font-medium">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     <span>网站设置</span>
                 </a>
-                <a href="editor.php" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
+                <a href="<?= h(site_url('admin/editor.php')) ?>" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     <span>首页编辑</span>
                 </a>
                 <hr class="my-3 border-gray-800">
-                <a href="../index.php" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
+                <a href="<?= h(site_url('index.php')) ?>" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                     <span>返回首页</span>
                 </a>
-                <a href="logout.php" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
+                <a href="<?= h(site_url('admin/logout.php')) ?>" class="flex items-center space-x-3 px-4 py-2.5 text-gray-300 hover:bg-gray-800 rounded-lg text-sm transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                     <span>退出登录</span>
                 </a>
             </nav>
         </aside>
 
-        <main class="flex-1 p-8">
+        <main class="flex-1 min-w-0 p-4 md:p-8">
             <div class="mb-8">
                 <h2 class="text-2xl font-bold text-gray-800">网站设置</h2>
                 <p class="text-gray-500">管理网站基本配置</p>
@@ -115,6 +132,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">网站标题</label>
                             <input type="text" name="site_name" value="<?= h(get_setting('site_name', 'AI 监控面板')) ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">站点基础 URL</label>
+                            <input type="url" name="site_base_url" value="<?= h(configured_site_base_url()) ?>" placeholder="https://check.zakuzaku.cc" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="mt-1 text-xs text-gray-400">内网穿透场景填写公网入口。保存后后台入口、登录跳转和前台请求会优先使用该地址。</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">网站图标 URL</label>

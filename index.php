@@ -5,7 +5,7 @@
 require_once __DIR__ . '/config.php';
 
 if (!is_installed()) {
-    header('Location: install.php');
+    header('Location: ' . site_url('install.php'));
     exit;
 }
 
@@ -217,11 +217,14 @@ if (empty($heroTags)) {
             border-radius: 999px;
             padding: 16px 22px;
             min-width: 156px;
+            display: flex;
+            flex-direction: column;
             background: rgba(255,255,255,0.66);
             border: 1px solid rgba(0,0,0,0.08);
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 16px 36px rgba(0,0,0,0.08);
         }
         .stat-number { font-variant-numeric: tabular-nums; letter-spacing: -0.06em; }
+        .stat-card .stat-number { margin-top: auto; }
         .stat-total { color: #475569; }
         .stat-healthy { color: #16a34a; text-shadow: 0 10px 28px rgba(22,163,74,0.14); }
         .stat-attention { color: #dc2626; text-shadow: 0 10px 28px rgba(220,38,38,0.12); }
@@ -488,7 +491,7 @@ if (empty($heroTags)) {
         <div class="kicker mb-3">No Services</div>
         <h2 class="text-3xl font-black tracking-[-0.05em] mb-3">暂无监控数据</h2>
         <p class="text-black/52 font-semibold mb-6">请先在后台添加分组和渠道。</p>
-        <a href="admin/index.php" class="pill px-6 py-3 text-sm font-black hover:bg-black hover:text-white transition">Open Admin</a>
+        <a href="<?= h(site_url('admin/index.php')) ?>" class="pill px-6 py-3 text-sm font-black hover:bg-black hover:text-white transition">Open Admin</a>
     </section>
     <?php else: ?>
     <main class="space-y-6">
@@ -572,7 +575,7 @@ if (empty($heroTags)) {
                                 <div class="pill px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] max-w-full">
                                     <span class="truncate"><?= h($provider) ?></span>
                                 </div>
-                                <h3 class="mt-2 text-lg font-black tracking-[-0.04em] truncate"><?= h($channel['name']) ?></h3>
+                                <h3 class="mt-2 text-lg font-black tracking-[-0.04em] break-words leading-tight"><?= h($channel['name']) ?></h3>
                             </div>
                         </div>
                         <span class="text-[10px] px-3 py-1.5 rounded-full font-black border flex-shrink-0 uppercase tracking-[0.12em] <?= $badgeClass ?>" id="badge-<?= $channel['id'] ?>"><?= $badgeText ?></span>
@@ -705,8 +708,8 @@ function getUptimeClass(value) {
     if (!value || value === '--') return 'value-muted';
     const n = Number(String(value).replace('%', ''));
     if (Number.isNaN(n)) return 'value-muted';
-    if (n >= 99) return 'value-good';
-    if (n >= 95) return 'value-warn';
+    if (n >= 85) return 'value-good';
+    if (n >= 60) return 'value-warn';
     return 'value-bad';
 }
 
@@ -833,7 +836,7 @@ async function checkAndLoad() {
     isChecking = true;
     setGlobalBadge('checking');
     try {
-        const res = await fetch('api/check.php');
+        const res = await fetch(<?= json_encode(site_url('api/check.php')) ?>);
         const data = await res.json();
         updateAll(data);
         setGlobalBadge('ok');
@@ -853,7 +856,7 @@ function manualRefresh() {
 document.addEventListener('DOMContentLoaded', async () => {
     applyInitialGroupCollapse();
     try {
-        const res = await fetch('api/status.php');
+        const res = await fetch(<?= json_encode(site_url('api/status.php')) ?>);
         const data = await res.json();
         updateAll(data);
     } catch(e) {

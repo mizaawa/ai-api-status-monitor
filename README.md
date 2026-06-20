@@ -1,11 +1,12 @@
-# AI Checker PHP
+# AI API Status Monitor
 
 一个轻量级 AI API 状态监控面板，用于集中监控多个 OpenAI-Compatible 接口渠道的可用性、对话延迟、端点 PING、近期检测轨迹和分组状态。
 
 项目基于 PHP + MySQL 构建，不依赖复杂前端构建流程，适合部署在宝塔、Apache、Nginx、虚拟主机或普通 PHP 环境中。
 
-演示界面: https://check.zakuzaku.cc
-API中转站：https://ai.zakuzaku.cc/
+- 仓库地址：https://github.com/mizaawa/ai-api-status-monitor
+- 演示界面：https://check.zakuzaku.cc
+- API 中转站：https://ai.zakuzaku.cc/
 
 ## 功能特性
 
@@ -43,8 +44,8 @@ API中转站：https://ai.zakuzaku.cc/
 ### 1. 下载项目
 
 ```bash
-git clone https://github.com/your-name/ai-checker-php.git
-cd ai-checker-php
+git clone https://github.com/mizaawa/ai-api-status-monitor.git
+cd ai-api-status-monitor
 ```
 
 也可以直接下载 ZIP 后上传到服务器站点目录。
@@ -117,6 +118,18 @@ chown -R www:www /www/wwwroot/你的站点目录/uploads
 chmod -R 775 /www/wwwroot/你的站点目录/uploads
 ```
 
+## 内网穿透 / 反向代理部署
+
+如果站点源站在内网（例如通过内网穿透暴露到公网），请在后台
+「网站设置 → 站点基础 URL」中填写公网入口地址，例如：
+
+```text
+https://check.zakuzaku.cc
+```
+
+填写后，后台入口、登录跳转和前台请求都会优先使用该公网地址，
+避免被反向代理改写成内网 IP。
+
 ## Apache 配置
 
 项目包含 `.htaccess`，Apache 环境一般可以直接使用。
@@ -143,6 +156,12 @@ location ~ \.php$ {
     fastcgi_pass unix:/run/php/php8.2-fpm.sock;
     fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
 }
+
+# 安全加固：禁止从外部直接访问配置目录
+location ^~ /data/ {
+    deny all;
+    return 404;
+}
 ```
 
 请根据你的服务器 PHP-FPM sock 或端口调整 `fastcgi_pass`。
@@ -156,7 +175,7 @@ location ~ \.php$ {
 │   ├── editor.php         # 首页内容编辑
 │   ├── groups.php         # 分组管理
 │   ├── index.php          # 后台首页
-│   ├── login.php          # 登录
+│   ├── login.php          # 登录（含失败限速）
 │   ├── logout.php         # 退出登录
 │   └── settings.php       # 网站设置
 ├── api/                   # 前端和定时检测接口
@@ -167,7 +186,7 @@ location ~ \.php$ {
 │   ├── auth.php           # 登录认证
 │   ├── db.php             # 数据库封装
 │   └── functions.php      # 工具函数、检测逻辑、建表升级
-├── config.php             # 配置加载器
+├── config.php             # 配置加载器、会话安全设置
 ├── index.php              # 首页状态面板
 ├── install.php            # 安装向导
 ├── .htaccess              # Apache rewrite 和访问控制
@@ -209,6 +228,16 @@ uploads/                # 上传文件，不建议提交到 Git
 
 这样可以在确认模型可用性的同时尽量降低 token 消耗。
 
+### 定时检测
+
+`api/monitor.php` 可供 Cron 定时调用，检测所有活跃渠道并写入日志：
+
+```bash
+curl https://你的域名/api/monitor
+```
+
+建议配合服务器计划任务（例如每分钟或每 5 分钟）调用一次。
+
 ## 状态颜色说明
 
 首页状态使用以下语义：
@@ -217,6 +246,12 @@ uploads/                # 上传文件，不建议提交到 Git
 - 黄色：延迟偏高，需要关注
 - 红色：异常、超时、不可用
 - 灰色：暂无数据
+
+可用率（Availability）颜色阈值：
+
+- 绿色：≥ 85%
+- 黄色：60% ~ 85%
+- 红色：< 60%
 
 折叠分组中的渠道小点也使用同样语义。
 
@@ -236,14 +271,32 @@ uploads/                # 上传文件，不建议提交到 Git
 - 首页 Hero 文案
 - 首页自定义内容
 
-## 安全建议
+## 安全设计
 
-- 不要把 `data/config.php` 提交到 GitHub。
+本项目对「API Key 泄露」和「管理员账号被爆破」两类风险做了针对性处理：
+
+- **API Key 不下发到前端**：渠道列表和编辑表单都不会把明文 API Key 输出到页面 HTML。
+  编辑渠道时 API Key 字段留空表示「保持原 Key 不变」，只有主动填写新值才会更新。
+- **API Key 不经公开接口暴露**：公开的 `api/status.php` / `api/check.php` 只返回延迟、状态码、
+  错误信息等监控数据，不包含 `api_key` 字段。
+- **登录失败限速**：连续多次登录失败后会临时锁定一段时间，并对每次失败做轻微延迟，
+  减缓自动化暴力破解。
+- **密码安全存储**：管理员密码使用 PHP `password_hash`（bcrypt）哈希存储，不保存明文。
+- **会话加固**：会话 Cookie 默认启用 `HttpOnly`、`SameSite=Lax`，在 HTTPS 下自动启用
+  `Secure`；登录成功后会重置会话 ID（`session_regenerate_id`），降低会话固定攻击风险。
+- **数据库防注入**：所有数据库操作均使用 PDO 预处理语句（参数绑定）。
+- **输出转义**：页面输出统一通过 `h()`（`htmlspecialchars`）转义，降低 XSS 风险。
+
+## 部署后安全建议
+
+- 不要把 `data/config.php` 提交到 GitHub（仓库已默认忽略 `data/`）。
 - 不要把真实 API Key 提交到仓库。
 - 不建议把 `uploads/` 上传内容提交到仓库。
-- 生产环境建议关闭 PHP 错误直接输出。
-- 建议给后台路径配置 HTTPS。
-- 如果部署在公网，请使用强密码保护管理员账号。
+- 生产环境务必使用 HTTPS，确保会话 Cookie 的 `Secure` 属性生效。
+- 通过 Nginx/Apache 规则禁止外部直接访问 `data/` 目录（见上方 Nginx 示例）。
+- 给管理员账号设置强密码，并定期更换。
+- 生产环境建议关闭 PHP 错误直接输出（`display_errors = Off`）。
+- 如条件允许，可为后台路径再叠加一层 IP 白名单或 Basic Auth。
 
 ## Git 忽略建议
 

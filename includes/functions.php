@@ -304,12 +304,39 @@ function ensure_group_icon_column(): void {
 }
 
 /**
+ * 规范化首页自定义内容中的内部链接
+ */
+function normalize_home_content_links(string $content): string {
+    $adminUrl = site_url('admin/index.php');
+    $homeUrl = site_url('index.php');
+
+    $replacements = [
+        'href="admin"' => 'href="' . h($adminUrl) . '"',
+        "href='admin'" => "href='" . h($adminUrl) . "'",
+        'href="admin/"' => 'href="' . h($adminUrl) . '"',
+        "href='admin/'" => "href='" . h($adminUrl) . "'",
+        'href="/admin"' => 'href="' . h($adminUrl) . '"',
+        "href='/admin'" => "href='" . h($adminUrl) . "'",
+        'href="/admin/"' => 'href="' . h($adminUrl) . '"',
+        "href='/admin/'" => "href='" . h($adminUrl) . "'",
+        'href="admin/index.php"' => 'href="' . h($adminUrl) . '"',
+        "href='admin/index.php'" => "href='" . h($adminUrl) . "'",
+        'href="/admin/index.php"' => 'href="' . h($adminUrl) . '"',
+        "href='/admin/index.php'" => "href='" . h($adminUrl) . "'",
+        'href="index.php"' => 'href="' . h($homeUrl) . '"',
+        "href='index.php'" => "href='" . h($homeUrl) . "'",
+    ];
+
+    return strtr($content, $replacements);
+}
+
+/**
  * 获取首页自定义内容
  */
 function get_home_content(): string {
     try {
         $row = db_get('home_content', 'content_type = ?', ['html']);
-        return $row ? $row['content'] : '';
+        return $row ? normalize_home_content_links((string)$row['content']) : '';
     } catch (Exception $e) {
         return '';
     }

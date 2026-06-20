@@ -6,7 +6,7 @@ require_once __DIR__ . '/../config.php';
 session_start();
 
 if (isset($_SESSION['admin_id'])) {
-    header('Location: index.php');
+    header('Location: ' . site_url('admin/index.php'));
     exit;
 }
 
@@ -15,14 +15,39 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 $error = '';
+
+// 简单的登录限速：基于会话记录失败次数，连续失败后短时锁定，减缓暴力破解
+$MAX_ATTEMPTS = 5;
+$LOCK_SECONDS = 300;
+$now = time();
+$attempts = (int)($_SESSION['login_attempts'] ?? 0);
+$lockUntil = (int)($_SESSION['login_lock_until'] ?? 0);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
-    if (admin_login($username, $password)) {
-        header('Location: index.php');
-        exit;
+    if ($lockUntil > $now) {
+        $wait = (int)ceil(($lockUntil - $now) / 60);
+        $error = "尝试次数过多，请在约 {$wait} 分钟后再试";
+    } else {
+        $username = trim($_POST['username'] ?? '');
+        $password = $_POST['password'] ?? '';
+        if (admin_login($username, $password)) {
+            unset($_SESSION['login_attempts'], $_SESSION['login_lock_until']);
+            header('Location: ' . site_url('admin/index.php'));
+            exit;
+        }
+        $attempts++;
+        $_SESSION['login_attempts'] = $attempts;
+        if ($attempts >= $MAX_ATTEMPTS) {
+            $_SESSION['login_lock_until'] = $now + $LOCK_SECONDS;
+            $_SESSION['login_attempts'] = 0;
+            $error = "尝试次数过多，已临时锁定，请约 " . ($LOCK_SECONDS / 60) . " 分钟后再试";
+        } else {
+            // 失败后做轻微延迟，进一步拖慢自动化爆破
+            usleep(300000);
+            $remaining = $MAX_ATTEMPTS - $attempts;
+            $error = "用户名或密码错误（还可尝试 {$remaining} 次）";
+        }
     }
-    $error = '用户名或密码错误';
 }
 ?>
 <!DOCTYPE html>
@@ -56,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="submit" class="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 font-medium transition">登录</button>
             </form>
             <div class="mt-4 text-center">
-                <a href="../index.php" class="text-sm text-gray-400 hover:text-gray-600 transition">← 返回首页</a>
+                <a href="<?= h(site_url('index.php')) ?>" class="text-sm text-gray-400 hover:text-gray-600 transition">← 返回首页</a>
             </div>
         </div>
     </div>

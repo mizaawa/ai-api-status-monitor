@@ -16,7 +16,7 @@ if (!function_exists('h')) {
 
 // 如果已安装则跳转
 if (is_installed()) {
-    header('Location: index.php');
+    header('Location: ' . site_url('index.php'));
     exit;
 }
 
@@ -108,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'db_user' => trim($_POST['db_user']),
                 'db_pass' => $_POST['db_pass'],
                 'db_prefix' => $dbPrefix,
+                'site_base_url' => '',
                 'site_name' => 'AI 监控面板',
                 'site_icon' => '',
             ];
@@ -147,6 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'db_user' => $cfg['db_user'],
                 'db_pass' => $cfg['db_pass'],
                 'db_prefix' => $cfg['db_prefix'],
+                'site_base_url' => '',
                 'site_name' => 'AI 监控面板',
                 'site_icon' => '',
             ];
@@ -363,8 +365,8 @@ if ($step === 2 && !file_exists(CONFIG_FILE)) {
                     <h1 class="text-2xl font-bold text-gray-800 mb-2">安装完成！</h1>
                     <p class="text-gray-500 mb-8">AI 监控面板已成功安装，现在可以开始使用了。</p>
                     <div class="flex justify-center space-x-4">
-                        <a href="index.php" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium transition">进入首页</a>
-                        <a href="admin/index.php" class="bg-gray-800 text-white px-8 py-3 rounded-lg hover:bg-gray-900 font-medium transition">进入后台</a>
+                        <a href="<?= h(site_url('index.php')) ?>" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium transition">进入首页</a>
+                        <a href="<?= h(site_url('admin/index.php')) ?>" class="bg-gray-800 text-white px-8 py-3 rounded-lg hover:bg-gray-900 font-medium transition">进入后台</a>
                     </div>
                 </div>
             <?php endif; ?>

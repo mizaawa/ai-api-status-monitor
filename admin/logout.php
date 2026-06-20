@@ -4,5 +4,5 @@
  */
 require_once __DIR__ . '/../includes/auth.php';
 admin_logout();
-header('Location: login.php');
+header('Location: ' . site_url('admin/login.php'));
 exit;
