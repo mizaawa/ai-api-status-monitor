@@ -12,6 +12,7 @@ if (isset($_SESSION['admin_id'])) {
 
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

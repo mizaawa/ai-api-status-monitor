@@ -11,7 +11,10 @@ function is_admin_logged_in(): bool {
 function require_admin(): void {
     session_start();
     if (!is_admin_logged_in()) {
-        header('Location: admin/login.php');
+        $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+        $basePath = basename($scriptDir) === 'admin' ? dirname($scriptDir) : $scriptDir;
+        $basePath = $basePath === '/' ? '' : rtrim($basePath, '/');
+        header('Location: ' . $basePath . '/admin/login.php');
         exit;
     }
 }
