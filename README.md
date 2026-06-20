@@ -4,6 +4,9 @@
 
 项目基于 PHP + MySQL 构建，不依赖复杂前端构建流程，适合部署在宝塔、Apache、Nginx、虚拟主机或普通 PHP 环境中。
 
+演示界面: https://check.zakuzaku.cc
+API中转站：https://ai.zakuzaku.cc/
+
 ## 功能特性
 
 - 多分组管理：按供应商或业务维度管理渠道，例如 ChatGPT、Claude、Gemini 等。
