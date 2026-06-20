@@ -1,0 +1,28 @@
+RewriteEngine On
+
+# If not installed, redirect to installer
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^install/?$ install.php [L]
+
+# Admin routes
+RewriteRule ^admin/?$ admin/index.php [L]
+RewriteRule ^admin/login/?$ admin/login.php [L]
+RewriteRule ^admin/logout/?$ admin/logout.php [L]
+RewriteRule ^admin/groups/?$ admin/groups.php [L]
+RewriteRule ^admin/channels/?$ admin/channels.php [L]
+RewriteRule ^admin/settings/?$ admin/settings.php [L]
+RewriteRule ^admin/editor/?$ admin/editor.php [L]
+
+# API routes
+RewriteRule ^api/check$ api/check.php [L]
+RewriteRule ^api/status$ api/status.php [L]
+RewriteRule ^api/monitor$ api/monitor.php [L]
+
+# Static assets
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Default
+RewriteRule ^(.*)$ index.php [QSA,L]
