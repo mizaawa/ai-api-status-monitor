@@ -93,9 +93,27 @@ function check_endpoint_ping(string $apiUrl): ?int {
 }
 
 /**
- * 检查 OpenAI 格式的 API
+ * 检查 OpenAI 格式的 API（支持从分组继承配置）
  */
-function check_ai_api(string $apiKey, string $apiUrl, string $model): array {
+function check_ai_api(string $apiKey, string $apiUrl, string $model, ?int $groupId = null): array {
+    // 如果 apiKey 或 apiUrl 为空，尝试从分组继承
+    if (($apiKey === '' || $apiUrl === '') && $groupId > 0) {
+        $group = db_get('groups', 'id = ?', [$groupId]);
+        if ($group) {
+            if ($apiKey === '' && !empty($group['default_api_key'])) {
+                $apiKey = $group['default_api_key'];
+            }
+            if ($apiUrl === '' && !empty($group['default_api_url'])) {
+                $apiUrl = $group['default_api_url'];
+            }
+        }
+    }
+
+    // 仍然缺少必要参数则返回错误
+    if ($apiKey === '' || $apiUrl === '') {
+        return ['latency' => 0, 'ping_latency' => null, 'status_code' => 0, 'error' => '缺少 API Key 或接口地址', 'success' => false];
+    }
+
     $pingLatency = check_endpoint_ping($apiUrl);
     $start = microtime(true);
 
@@ -246,6 +264,8 @@ function ensure_monitor_schema_columns(): void {
     $columns = [
         ['groups', 'icon_url', "ALTER TABLE " . tn('groups') . " ADD COLUMN `icon_url` VARCHAR(500) DEFAULT ''"],
         ['groups', 'provider_name', "ALTER TABLE " . tn('groups') . " ADD COLUMN `provider_name` VARCHAR(100) DEFAULT ''"],
+        ['groups', 'default_api_url', "ALTER TABLE " . tn('groups') . " ADD COLUMN `default_api_url` VARCHAR(500) DEFAULT NULL"],
+        ['groups', 'default_api_key', "ALTER TABLE " . tn('groups') . " ADD COLUMN `default_api_key` VARCHAR(500) DEFAULT NULL"],
         ['channels', 'last_ping_latency', "ALTER TABLE " . tn('channels') . " ADD COLUMN `last_ping_latency` INT DEFAULT NULL"],
         ['monitor_logs', 'ping_latency', "ALTER TABLE " . tn('monitor_logs') . " ADD COLUMN `ping_latency` INT DEFAULT NULL"],
     ];
@@ -269,6 +289,8 @@ function get_missing_monitor_schema_columns(): array {
     $columns = [
         ['groups', 'icon_url'],
         ['groups', 'provider_name'],
+        ['groups', 'default_api_url'],
+        ['groups', 'default_api_key'],
         ['channels', 'last_ping_latency'],
         ['monitor_logs', 'ping_latency'],
     ];
@@ -285,6 +307,8 @@ function monitor_schema_fix_sql(): string {
     $definitions = [
         'groups.icon_url' => "ALTER TABLE " . tn('groups') . " ADD COLUMN `icon_url` VARCHAR(500) DEFAULT '';",
         'groups.provider_name' => "ALTER TABLE " . tn('groups') . " ADD COLUMN `provider_name` VARCHAR(100) DEFAULT '';",
+        'groups.default_api_url' => "ALTER TABLE " . tn('groups') . " ADD COLUMN `default_api_url` VARCHAR(500) DEFAULT NULL;",
+        'groups.default_api_key' => "ALTER TABLE " . tn('groups') . " ADD COLUMN `default_api_key` VARCHAR(500) DEFAULT NULL;",
         'channels.last_ping_latency' => "ALTER TABLE " . tn('channels') . " ADD COLUMN `last_ping_latency` INT DEFAULT NULL;",
         'monitor_logs.ping_latency' => "ALTER TABLE " . tn('monitor_logs') . " ADD COLUMN `ping_latency` INT DEFAULT NULL;",
     ];

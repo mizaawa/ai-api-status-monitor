@@ -171,6 +171,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $iconUrl = normalize_icon_url($_POST['icon_url'] ?? '');
         $displayOrder = (int)($_POST['display_order'] ?? 0);
         $isActive = isset($_POST['is_active']) ? 1 : 0;
+        $defaultApiUrl = trim($_POST['default_api_url'] ?? '');
+        $defaultApiKey = trim($_POST['default_api_key'] ?? '');
 
         $upload = upload_group_icon($_FILES['icon_file'] ?? []);
         if (!$upload['ok']) {
@@ -201,6 +203,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'icon_url' => $iconUrl,
                     'display_order' => $displayOrder,
                     'is_active' => $isActive,
+                    'default_api_url' => $defaultApiUrl ?: null,
+                    'default_api_key' => $defaultApiKey ?: null,
                 ]);
                 $message = '分组创建成功';
             } else {
@@ -212,6 +216,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'icon_url' => $iconUrl,
                     'display_order' => $displayOrder,
                     'is_active' => $isActive,
+                    'default_api_url' => $defaultApiUrl ?: null,
+                    'default_api_key' => $defaultApiKey ?: null,
                 ], 'id = ?', [$id]);
                 $message = '分组更新成功';
             }
@@ -357,10 +363,13 @@ $groups = db_all('groups', '1=1', [], 'display_order ASC, id ASC');
     </div>
 
     <!-- Modal -->
-    <div id="groupModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-            <h3 class="text-lg font-bold text-gray-800 mb-4" id="modalTitle">新建分组</h3>
-            <form method="post" enctype="multipart/form-data" class="space-y-4">
+    <div id="groupModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col mx-4">
+            <div class="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
+                <h3 class="text-lg font-bold text-gray-800" id="modalTitle">新建分组</h3>
+            </div>
+            <div class="px-6 py-4 overflow-y-auto flex-1">
+                <form method="post" enctype="multipart/form-data" class="space-y-4" id="groupForm">
                 <input type="hidden" name="action" id="formAction" value="add">
                 <input type="hidden" name="id" id="formId" value="0">
                 <div>
@@ -375,6 +384,16 @@ $groups = db_all('groups', '1=1', [], 'display_order ASC, id ASC');
                     <label class="block text-sm font-medium text-gray-700 mb-1">供应商名称</label>
                     <input type="text" name="provider_name" id="formProviderName" placeholder="OpenAI / Anthropic / Google" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <p class="mt-1 text-xs text-gray-400">会显示在首页模型卡片的灰色圆角标签里。</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">默认 API 接口</label>
+                    <input type="url" name="default_api_url" id="formDefaultApiUrl" placeholder="https://api.openai.com/v1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <p class="mt-1 text-xs text-gray-400">该分组下所有渠道的默认接口地址，渠道可留空继承此配置。</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">默认 API 密钥</label>
+                    <input type="password" name="default_api_key" id="formDefaultApiKey" placeholder="sk-..." autocomplete="new-password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <p class="mt-1 text-xs text-gray-400">该分组下所有渠道的默认密钥，渠道可留空继承此配置。</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">分组图标链接</label>
@@ -397,11 +416,12 @@ $groups = db_all('groups', '1=1', [], 'display_order ASC, id ASC');
                     <input type="checkbox" name="is_active" id="formActive" checked class="rounded border-gray-300 text-blue-600">
                     <span class="text-sm text-gray-700">启用</span>
                 </label>
-                <div class="flex space-x-3 pt-2">
-                    <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">取消</button>
-                    <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition">保存</button>
-                </div>
             </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex space-x-3 shrink-0">
+                <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">取消</button>
+                <button type="submit" form="groupForm" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition">保存</button>
+            </div>
         </div>
     </div>
 
@@ -416,6 +436,8 @@ $groups = db_all('groups', '1=1', [], 'display_order ASC, id ASC');
             document.getElementById('formName').value = data.name;
             document.getElementById('formDescription').value = data.description || '';
             document.getElementById('formProviderName').value = data.provider_name || '';
+            document.getElementById('formDefaultApiUrl').value = data.default_api_url || '';
+            document.getElementById('formDefaultApiKey').value = data.default_api_key || '';
             document.getElementById('formIconUrl').value = data.icon_url || '';
             updateIconPreview(data.icon_url || '');
             document.getElementById('formOrder').value = data.display_order || 0;
@@ -427,6 +449,8 @@ $groups = db_all('groups', '1=1', [], 'display_order ASC, id ASC');
             document.getElementById('formName').value = '';
             document.getElementById('formDescription').value = '';
             document.getElementById('formProviderName').value = '';
+            document.getElementById('formDefaultApiUrl').value = '';
+            document.getElementById('formDefaultApiKey').value = '';
             document.getElementById('formIconUrl').value = '';
             document.getElementById('formIconFile').value = '';
             updateIconPreview('');
