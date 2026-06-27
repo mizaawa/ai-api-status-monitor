@@ -1,150 +1,133 @@
 # AI API Status Monitor
 
-一个轻量级 AI API 状态监控面板，用于集中监控多个 OpenAI-Compatible 接口渠道的可用性、对话延迟、端点 PING、近期检测轨迹和分组状态。
+一个轻量级的 OpenAI-Compatible 接口状态监控面板，适合监控多个渠道的可用性、延迟、端点连通性以及最近检测结果。
 
-项目基于 PHP + MySQL 构建，不依赖复杂前端构建流程，适合部署在宝塔、Apache、Nginx、虚拟主机或普通 PHP 环境中。
-
-- 仓库地址：https://github.com/mizaawa/ai-api-status-monitor
-- 演示界面：https://check.zakuzaku.cc
+- 项目仓库：https://github.com/mizaawa/ai-api-status-monitor
+- 在线演示：https://check.zakuzaku.cc
 - API 中转站：https://ai.zakuzaku.cc/
 
-## 功能特性
+## 项目特性
 
-- 多分组管理：按供应商或业务维度管理渠道，例如 ChatGPT、Claude、Gemini 等。
-- 多渠道监控：每个分组下可配置多个 API Key、API 地址和模型名。
-- OpenAI-Compatible 检测：通过 `/chat/completions` 接口检测模型可用性。
-- 低 token 消耗：检测消息默认只发送 `hi`，并限制 `max_tokens = 1`。
-- 双延迟指标：
-  - 对话延迟：真实模型接口响应耗时。
-  - 端点 PING：API 入口基础连通耗时。
-- 首页状态面板：展示总渠道数、健康数、异常数、最近同步时间。
-- 分组折叠：手机端和电脑端都支持分组折叠/展开。
-- 状态小点概览：折叠状态下也能快速查看渠道是否正常、延迟或异常。
-- 最近检测轨迹：使用红、黄、绿、灰状态条展示近期检测结果。
-- 后台管理：支持分组、渠道、站点设置、首页内容编辑。
-- 分组图标：支持上传图片，也支持填写 `uploads/...` 站内路径或外部图片 URL。
-- 自动安装向导：首次访问自动进入安装流程，生成数据库表和配置文件。
-- 兼容旧版本升级：内置数据库字段补齐逻辑。
+- 支持多分组管理，方便按业务线、供应商或环境分类
+- 支持多渠道监控，适配 OpenAI-Compatible 接口
+- 自动检测接口可用性、响应延迟、端点连通性
+- 支持前台状态展示与后台管理
+- 支持安装向导，首次访问自动完成基础部署
+- 支持旧数据兼容升级
+- 无需复杂构建流程，上传即用，适合宝塔、Nginx、Apache、虚拟主机环境
+
+## 技术栈
+
+- 后端：PHP 8.0+
+- 数据库：MySQL 5.7+ / MariaDB 10.3+
+- 前端：原生 PHP 模板 + Tailwind CDN
+- 执行方式：Web 请求 + Cron 定时任务
+
+## 目录结构
+
+```text
+web/
+├── admin/                后台管理页
+├── api/                  对外接口与监控入口
+├── includes/             公共函数、数据库、认证
+├── migrations/           数据升级脚本
+├── config.php            配置加载器与安装状态判断
+├── index.php             前台首页
+├── install.php           安装向导
+├── README.md             项目说明
+└── .htaccess             Apache 伪静态与路由规则
+```
+
+运行后还会生成：
+
+```text
+data/                     配置文件与安装锁
+uploads/                  上传目录（如有图标上传）
+```
+
+## 功能说明
+
+### 前台
+
+- 展示各分组下的渠道状态
+- 显示最近检测结果、延迟、错误信息
+- 提供分组聚合视图，方便快速查看整体健康情况
+
+### 后台
+
+- 管理分组
+- 管理渠道
+- 编辑站点设置
+- 编辑首页内容
+- 管理登录入口
+
+### 监控
+
+- `api/check.php`：手动触发检测
+- `api/status.php`：查询状态数据
+- `api/monitor.php`：定时监控入口，适合 Cron 调用
 
 ## 环境要求
 
 - PHP 8.0 或更高版本
-- MySQL 5.7+ / MariaDB 10.3+
+- MySQL 5.7+ 或 MariaDB 10.3+
 - PHP 扩展：
-  - PDO
-  - pdo_mysql
-  - cURL
-  - GD，上传并裁剪分组图标时需要
-- Web Server：
-  - Apache，支持 `.htaccess` 更方便
-  - Nginx，需要自行配置伪静态或直接访问 PHP 文件
+  - `pdo`
+  - `pdo_mysql`
+  - `curl`
+  - `mbstring`
+  - `openssl`
+  - `gd`（如需图片上传/处理）
+- Web 服务器：Nginx 或 Apache
 
-## 快速开始
+## 安装方式
 
-### 1. 下载项目
+### 方式一：宝塔面板部署
 
-```bash
-git clone https://github.com/mizaawa/ai-api-status-monitor.git
-cd ai-api-status-monitor
-```
+1. 在宝塔中新建站点，PHP 版本建议选择 8.0 及以上。
+2. 上传本项目到站点根目录。
+3. 确保 PHP 已开启以下扩展：`pdo_mysql`、`curl`、`mbstring`、`openssl`、`gd`。
+4. 创建 MySQL 数据库，并准备好数据库账号。
+5. 确保站点目录具有写入权限，尤其是：
+   - `data/`
+   - `uploads/`
+6. 访问 `https://你的域名/install.php` 完成安装。
 
-也可以直接下载 ZIP 后上传到服务器站点目录。
+### 方式二：传统服务器部署
 
-### 2. 配置运行目录权限
+1. 克隆仓库或上传代码到网站目录。
+2. 配置 PHP 运行环境与数据库。
+3. 配置 Web 服务器伪静态规则。
+4. 访问安装向导完成初始化。
 
-项目会在运行时生成 `data/` 配置目录，也会在上传图标时使用 `uploads/` 目录。
+## 宝塔部署步骤
 
-在 Linux 服务器上通常可以执行：
+### 1. 新建站点
 
-```bash
-mkdir -p data uploads/groups
-chown -R www:www data uploads
-chmod -R 775 data uploads
-```
+- 域名：`check.zakuzaku.cc`
+- 运行目录：项目根目录
+- PHP 版本：8.0+
 
-如果你的 PHP-FPM 用户不是 `www`，请改成实际用户，例如 `www-data`、`nginx` 或宝塔面板中的运行用户。
+### 2. 上传代码
 
-### 3. 创建数据库
-
-安装向导可以自动创建数据库表。你只需要提前准备一个 MySQL 用户，并确保它有目标数据库的建表权限。
-
-推荐创建一个独立数据库，例如：
-
-```sql
-CREATE DATABASE ai_monitor CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-### 4. 访问安装向导
-
-浏览器访问：
+将仓库文件上传到站点根目录，保持以下结构：
 
 ```text
-https://你的域名/install.php
+/public 不存在，当前项目为扁平结构
+index.php
+install.php
+admin/
+api/
+includes/
+config.php
+.htaccess
 ```
 
-按页面提示填写：
+### 3. 配置伪静态
 
-- 数据库地址
-- 数据库端口
-- 数据库名
-- 数据库用户名
-- 数据库密码
-- 表前缀
-- 管理员账号
+如果使用 Apache，可直接使用仓库自带 `.htaccess`。
 
-安装完成后会生成：
-
-```text
-data/config.php
-data/install.lock
-```
-
-如果服务器无法自动写入配置文件，安装向导会显示一段配置代码，按提示手动创建 `data/config.php` 即可。
-
-## 宝塔面板部署建议
-
-1. 新建 PHP 网站。
-2. 上传项目到网站根目录。
-3. PHP 版本选择 8.0 或更高。
-4. 确认 PHP 扩展已启用：`pdo_mysql`、`curl`、`gd`。
-5. 给 `data/` 和 `uploads/` 目录写入权限。
-6. 访问 `install.php` 完成安装。
-
-如果分组图标上传提示目录不可写，可以执行：
-
-```bash
-mkdir -p /www/wwwroot/你的站点目录/uploads/groups
-chown -R www:www /www/wwwroot/你的站点目录/uploads
-chmod -R 775 /www/wwwroot/你的站点目录/uploads
-```
-
-## 内网穿透 / 反向代理部署
-
-如果站点源站在内网（例如通过内网穿透暴露到公网），请在后台
-「网站设置 → 站点基础 URL」中填写公网入口地址，例如：
-
-```text
-https://check.zakuzaku.cc
-```
-
-填写后，后台入口、登录跳转和前台请求都会优先使用该公网地址，
-避免被反向代理改写成内网 IP。
-
-## Apache 配置
-
-项目包含 `.htaccess`，Apache 环境一般可以直接使用。
-
-如果 `.htaccess` 不生效，请确认 Apache 已开启：
-
-```apache
-AllowOverride All
-```
-
-## Nginx 配置参考
-
-如果使用 Nginx，可以先使用最简单的 PHP 站点配置，直接访问实际 PHP 文件。
-
-示例：
+如果使用 Nginx，可参考：
 
 ```nginx
 location / {
@@ -157,163 +140,164 @@ location ~ \.php$ {
     fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
 }
 
-# 安全加固：禁止从外部直接访问配置目录
 location ^~ /data/ {
     deny all;
     return 404;
 }
 ```
 
-请根据你的服务器 PHP-FPM sock 或端口调整 `fastcgi_pass`。
+请按你的服务器实际 PHP-FPM sock 或端口修改 `fastcgi_pass`。
 
-## 目录结构
-
-```text
-.
-├── admin/                 # 后台管理页面
-│   ├── channels.php       # 渠道管理
-│   ├── editor.php         # 首页内容编辑
-│   ├── groups.php         # 分组管理
-│   ├── index.php          # 后台首页
-│   ├── login.php          # 登录（含失败限速）
-│   ├── logout.php         # 退出登录
-│   └── settings.php       # 网站设置
-├── api/                   # 前端和定时检测接口
-│   ├── check.php          # 执行检测
-│   ├── monitor.php        # 监控接口
-│   └── status.php         # 状态数据
-├── includes/              # 公共逻辑
-│   ├── auth.php           # 登录认证
-│   ├── db.php             # 数据库封装
-│   └── functions.php      # 工具函数、检测逻辑、建表升级
-├── config.php             # 配置加载器、会话安全设置
-├── index.php              # 首页状态面板
-├── install.php            # 安装向导
-├── .htaccess              # Apache rewrite 和访问控制
-└── .gitignore             # Git 忽略配置
-```
-
-运行后会生成：
-
-```text
-data/                   # 本地配置和安装锁，不应提交到 Git
-uploads/                # 上传文件，不建议提交到 Git
-```
-
-## 检测机制
-
-每个渠道需要配置：
-
-- API Key
-- API 地址，例如 `https://api.openai.com/v1`
-- 模型名，例如 `gpt-4o-mini`
-
-检测时会请求：
-
-```text
-{api_url}/chat/completions
-```
-
-请求内容为：
-
-```json
-{
-  "model": "你的模型名",
-  "messages": [
-    { "role": "user", "content": "hi" }
-  ],
-  "max_tokens": 1
-}
-```
-
-这样可以在确认模型可用性的同时尽量降低 token 消耗。
-
-### 定时检测
-
-`api/monitor.php` 可供 Cron 定时调用，检测所有活跃渠道并写入日志：
+### 4. 设置目录权限
 
 ```bash
-curl https://你的域名/api/monitor
+mkdir -p data uploads
+chmod -R 775 data uploads
 ```
 
-建议配合服务器计划任务（例如每分钟或每 5 分钟）调用一次。
+如果你的 PHP-FPM 用户不是 `www`，请按实际用户修改属主。
 
-## 状态颜色说明
+### 5. 访问安装向导
 
-首页状态使用以下语义：
-
-- 绿色：正常、稳定
-- 黄色：延迟偏高，需要关注
-- 红色：异常、超时、不可用
-- 灰色：暂无数据
-
-可用率（Availability）颜色阈值：
-
-- 绿色：≥ 85%
-- 黄色：60% ~ 85%
-- 红色：< 60%
-
-折叠分组中的渠道小点也使用同样语义。
-
-## 后台入口
-
-安装完成后访问：
+打开：
 
 ```text
-/admin/login.php
+https://check.zakuzaku.cc/install.php
 ```
 
-登录后可以管理：
+按页面提示填写数据库信息和管理员账号。
 
-- 分组
-- 渠道
-- 网站设置
-- 首页 Hero 文案
-- 首页自定义内容
-
-## 安全设计
-
-本项目对「API Key 泄露」和「管理员账号被爆破」两类风险做了针对性处理：
-
-- **API Key 不下发到前端**：渠道列表和编辑表单都不会把明文 API Key 输出到页面 HTML。
-  编辑渠道时 API Key 字段留空表示「保持原 Key 不变」，只有主动填写新值才会更新。
-- **API Key 不经公开接口暴露**：公开的 `api/status.php` / `api/check.php` 只返回延迟、状态码、
-  错误信息等监控数据，不包含 `api_key` 字段。
-- **登录失败限速**：连续多次登录失败后会临时锁定一段时间，并对每次失败做轻微延迟，
-  减缓自动化暴力破解。
-- **密码安全存储**：管理员密码使用 PHP `password_hash`（bcrypt）哈希存储，不保存明文。
-- **会话加固**：会话 Cookie 默认启用 `HttpOnly`、`SameSite=Lax`，在 HTTPS 下自动启用
-  `Secure`；登录成功后会重置会话 ID（`session_regenerate_id`），降低会话固定攻击风险。
-- **数据库防注入**：所有数据库操作均使用 PDO 预处理语句（参数绑定）。
-- **输出转义**：页面输出统一通过 `h()`（`htmlspecialchars`）转义，降低 XSS 风险。
-
-## 部署后安全建议
-
-- 不要把 `data/config.php` 提交到 GitHub（仓库已默认忽略 `data/`）。
-- 不要把真实 API Key 提交到仓库。
-- 不建议把 `uploads/` 上传内容提交到仓库。
-- 生产环境务必使用 HTTPS，确保会话 Cookie 的 `Secure` 属性生效。
-- 通过 Nginx/Apache 规则禁止外部直接访问 `data/` 目录（见上方 Nginx 示例）。
-- 给管理员账号设置强密码，并定期更换。
-- 生产环境建议关闭 PHP 错误直接输出（`display_errors = Off`）。
-- 如条件允许，可为后台路径再叠加一层 IP 白名单或 Basic Auth。
-
-## Git 忽略建议
-
-项目已经忽略运行期数据，建议保持以下内容不提交：
+安装完成后会生成：
 
 ```text
-data/
-uploads/
-*.lock
+data/config.php
+data/install.lock
 ```
 
-## 开源协议
+如果服务器不允许自动写入配置文件，安装页会提示手动创建 `data/config.php`。
 
-本项目遵守 MIT 开源协议。
+## 安装页面填写项
 
-你可以自由使用、复制、修改、合并、发布、分发、再授权或销售本项目副本，但需要保留原始版权声明和许可声明。
+- 数据库主机：通常为 `127.0.0.1`
+- 数据库端口：通常为 `3306`
+- 数据库名：你创建的数据库名
+- 数据库用户名：数据库账号
+- 数据库密码：数据库密码
+- 表前缀：默认 `ai_`，可按需修改
+- 管理员账号：后台登录用户名
+- 管理员密码：后台登录密码
+
+## 定时任务配置
+
+如果你希望“完全无人访问也照样定时跑”，需要配置系统级 Cron，调用 `api/monitor.php`。
+
+### Linux / Debian / Ubuntu
+
+编辑当前用户的计划任务：
+
+```bash
+crontab -e
+```
+
+加入：
+
+```bash
+*/1 * * * * curl -fsS --connect-timeout 10 --max-time 30 https://check.zakuzaku.cc/api/monitor.php >/dev/null 2>&1
+```
+
+如果你的服务器不方便直接请求公网域名，也可以本机调用：
+
+```bash
+*/1 * * * * /usr/bin/curl -fsS --connect-timeout 10 --max-time 30 https://check.zakuzaku.cc/api/monitor.php >/dev/null 2>&1
+```
+
+### 宝塔面板定时任务
+
+1. 打开宝塔面板
+2. 进入「计划任务」
+3. 新建任务类型选择「Shell脚本」
+4. 执行周期选择「每分钟」
+5. 脚本内容填写：
+
+```bash
+curl -fsS --connect-timeout 10 --max-time 30 https://check.zakuzaku.cc/api/monitor.php >/dev/null 2>&1
+```
+
+> 说明：脚本执行后不会在终端显示内容，这是正常的。
+
+## 更新与升级
+
+如果你是从旧版本升级，可以参考仓库中的：
+
+- `README_UPDATE.md`
+- `UPGRADE_GUIDE.md`
+
+一般流程是：
+
+1. 备份数据库
+2. 替换代码文件
+3. 打开后台或访问相关页面触发自动升级
+4. 如有提示，手动执行对应 SQL
+
+## 常见问题
+
+### 1. 安装页打不开
+
+确认以下项目：
+
+- 域名解析是否正确
+- 站点根目录是否指向项目目录
+- `.htaccess` 是否生效（Apache）
+- Nginx 是否已配置伪静态
+
+### 2. 数据库连接失败
+
+检查：
+
+- 数据库主机、端口、用户名、密码是否正确
+- 数据库用户是否有建表权限
+- 数据库服务是否正常运行
+
+### 3. 后台登录后又跳回登录页
+
+检查：
+
+- `data/` 是否可写
+- PHP session 是否正常工作
+- 浏览器是否禁用了 Cookie
+- 是否通过 HTTPS/代理导致 Cookie 作用域异常
+
+### 4. 定时任务没有执行
+
+检查：
+
+- Cron 是否已启动
+- 任务是否写入成功
+- 服务器是否允许外部 HTTP 请求
+- `api/monitor.php` 是否能在浏览器中正常访问
+
+### 5. 页面样式异常
+
+检查：
+
+- CDN 是否可访问
+- 浏览器控制台是否有报错
+- PHP 是否正确输出页面内容
+
+## 安全建议
+
+- 不要把 `data/config.php` 提交到仓库
+- 不要把真实数据库密码提交到仓库
+- 不要把真实 API Key 明文写进公开代码
+- 生产环境建议开启 HTTPS
+- 后台建议增加强密码和访问限制
+- 建议限制 `data/` 目录的外部访问
 
 ## License
 
 MIT License
+
+## 作者
+
+- 项目维护：mizaawa
+- 仓库地址：https://github.com/mizaawa/ai-api-status-monitor

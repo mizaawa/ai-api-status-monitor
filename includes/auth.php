@@ -3,6 +3,7 @@
  * 认证模块
  */
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/functions.php';
 
 function is_admin_logged_in(): bool {
     return isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0;
@@ -14,6 +15,8 @@ function require_admin(): void {
         header('Location: ' . site_url('admin/login.php'));
         exit;
     }
+
+    maybe_run_monitor_cycle();
 }
 
 function admin_login(string $username, string $password): bool {

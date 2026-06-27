@@ -834,14 +834,13 @@ function setGlobalBadge(state) {
 async function checkAndLoad() {
     if (isChecking) return;
     isChecking = true;
-    setGlobalBadge('checking');
     try {
-        const res = await fetch(<?= json_encode(site_url('api/check.php')) ?>);
+        const res = await fetch(<?= json_encode(site_url('api/status.php')) ?>);
         const data = await res.json();
         updateAll(data);
         setGlobalBadge('ok');
     } catch(e) {
-        console.error('检测失败:', e);
+        console.error('加载数据失败:', e);
         setGlobalBadge('error');
     }
     isChecking = false;

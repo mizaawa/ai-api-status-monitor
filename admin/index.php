@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 $groupCount = count(db_all('groups'));
+
 $channelCount = count(db_all('channels'));
 $activeChannels = count(db_all('channels', 'is_active = 1'));
 

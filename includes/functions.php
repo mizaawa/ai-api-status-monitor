@@ -405,3 +405,98 @@ function clean_old_logs(): void {
         );
     }
 }
+
+/**
+ * 执行一次完整检测
+ */
+function run_monitor_cycle(): array {
+    ensure_monitor_schema_columns();
+
+    $channels = db_all('channels', 'is_active = 1');
+    $results = [];
+    $successCount = 0;
+    $failCount = 0;
+
+    foreach ($channels as $ch) {
+        $result = check_ai_api(
+            $ch['api_key'] ?? '',
+            $ch['api_url'] ?? '',
+            $ch['model'] ?? '',
+            isset($ch['group_id']) ? (int)$ch['group_id'] : null
+        );
+
+        db_update('channels', [
+            'last_latency' => $result['latency'],
+            'last_ping_latency' => $result['ping_latency'],
+            'last_status' => $result['status_code'],
+            'last_error' => $result['error'],
+            'last_check_at' => date('Y-m-d H:i:s'),
+        ], 'id = ?', [(int)$ch['id']]);
+
+        db_insert('monitor_logs', [
+            'channel_id' => (int)$ch['id'],
+            'latency' => $result['latency'],
+            'ping_latency' => $result['ping_latency'],
+            'status_code' => $result['status_code'],
+            'error_message' => $result['error'],
+        ]);
+
+        if ($result['success']) {
+            $successCount++;
+        } else {
+            $failCount++;
+        }
+
+        $results[] = [
+            'channel_id' => (int)$ch['id'],
+            'name' => $ch['name'] ?? '',
+            'latency' => $result['latency'],
+            'ping_latency' => $result['ping_latency'],
+            'success' => $result['success'],
+        ];
+    }
+
+    clean_old_logs();
+
+    return [
+        'checked' => count($results),
+        'success' => $successCount,
+        'fail' => $failCount,
+        'results' => $results,
+        'ts' => date('Y-m-d H:i:s'),
+    ];
+}
+
+/**
+ * 按检测间隔在后台自动触发一次检测
+ */
+function maybe_run_monitor_cycle(): void {
+    static $executed = false;
+    if ($executed) {
+        return;
+    }
+    $executed = true;
+
+    $interval = max(10, (int)get_setting('check_interval', '60'));
+    if ($interval <= 0) {
+        return;
+    }
+
+    try {
+        $stmt = db()->query(
+            "SELECT MAX(last_check_at) AS last_check_at FROM " . tn('channels') . " WHERE is_active = 1"
+        );
+        $row = $stmt ? $stmt->fetch() : null;
+        $lastCheckAt = $row['last_check_at'] ?? null;
+        if (!empty($lastCheckAt)) {
+            $elapsed = time() - strtotime((string)$lastCheckAt);
+            if ($elapsed < $interval) {
+                return;
+            }
+        }
+
+        run_monitor_cycle();
+    } catch (Exception $e) {
+        // 后台自动检测失败时不阻断页面展示
+    }
+}
